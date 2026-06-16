@@ -40,16 +40,48 @@ the bottleneck, so CPU-Optimized is recommended once you have real traffic.
    droplets run slicer workers off Managed Redis. More moving parts; adopt when
    you outgrow a single box.
 
-## Deploy
+## Deploy — option A: run it yourself (local state)
 
 ```bash
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars   # fill in token, region, keys
-terraform init
+terraform init -backend=false                  # state stays on your machine
 terraform plan          # review — this creates billable resources
 terraform apply
 terraform output app_url
 ```
+
+## Deploy — option B: let Claude apply from the web session (remote state)
+
+State must live somewhere durable (not the ephemeral session container), so we
+keep it in a DigitalOcean Spaces bucket (`backend.tf`).
+
+**1. You add these to the session's environment secrets** (web settings →
+environment variables — *not* pasted into chat):
+
+| Secret name | Value |
+|---|---|
+| `TF_VAR_do_token` | DO API token (read/write PAT) |
+| `TF_VAR_spaces_access_id` | Spaces access key |
+| `TF_VAR_spaces_secret_key` | Spaces secret key |
+| `AWS_ACCESS_KEY_ID` | same Spaces access key (used by the state backend) |
+| `AWS_SECRET_ACCESS_KEY` | same Spaces secret key (used by the state backend) |
+
+> Env vars are applied when the session container starts, so you may need to
+> start a fresh session (or let it re-provision) after adding them.
+
+**2. Claude bootstraps state + applies** (with your confirmation on the plan):
+
+```bash
+pip install boto3 && python infra/bootstrap_state.py   # creates the state bucket once
+cd infra/terraform
+terraform init            # connects to the Spaces backend
+terraform plan -out tf.plan
+terraform apply tf.plan   # only after you OK the plan
+```
+
+If your region isn't `nyc3`, update the endpoint in `backend.tf` and
+`SLICER2_STATE_REGION` to match where the state bucket lives.
 
 The droplet's cloud-init clones the repo, writes `deploy/.env`, and runs
 `deploy/docker-compose.prod.yml`. First boot takes a few minutes (it builds the
