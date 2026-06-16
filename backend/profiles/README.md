@@ -20,6 +20,20 @@ The filename for a slice is derived from the user's options:
 `process_{layer_height:.2f}mm.json` and `filament_{filament}.json`
 (see `app/slicer.py`).
 
+## Quickest path: `scripts/setup_slicer.sh`
+
+To populate this directory automatically, run from the repo root:
+
+```bash
+./scripts/setup_slicer.sh a1_mini   # or: a1
+```
+
+It downloads OrcaSlicer (a Bambu Studio fork with the same CLI that **bundles
+A1 profiles**), then runs `scripts/flatten_profiles.py` to resolve OrcaSlicer's
+`inherits` chains into the standalone `machine.json` / `process_*.json` /
+`filament_*.json` files described below. Review the output before trusting
+print quality. To do it manually instead, read on.
+
 ## Where to get them
 
 1. Install Bambu Studio (or OrcaSlicer) on a desktop, or pull them from the
