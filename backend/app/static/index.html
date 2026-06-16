@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Slicer2 — slice in the cloud</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Slicer2</h1>
+      <p class="tagline">Better slicing as a service</p>
+    </header>
+
+    <form id="slice-form">
+      <label class="file-drop">
+        <input type="file" id="file" accept=".stl,.3mf,.step,.stp,.obj" required />
+        <span id="file-label">Tap to choose a model (STL / 3MF / STEP / OBJ)</span>
+      </label>
+
+      <div class="row">
+        <label>Printer
+          <select id="printer" name="printer">
+            <option value="a1_mini">Bambu Lab A1 mini</option>
+            <option value="a1">Bambu Lab A1</option>
+          </select>
+        </label>
+        <label>Filament
+          <select id="filament" name="filament">
+            <option value="pla">Standard PLA</option>
+            <option value="petg">Overture PETG</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Layer height
+          <select id="layer_height_mm" name="layer_height_mm">
+            <option value="0.12">0.12 mm (fine)</option>
+            <option value="0.20" selected>0.20 mm (standard)</option>
+            <option value="0.28">0.28 mm (draft)</option>
+          </select>
+        </label>
+        <label>Infill %
+          <input type="number" id="infill_density" name="infill_density" min="0" max="100" value="15" />
+        </label>
+      </div>
+
+      <label class="check">
+        <input type="checkbox" id="supports" name="supports" />
+        Generate supports
+      </label>
+
+      <!-- Clickwrap legal gate (PRD §6). Logged server-side with IP + timestamp. -->
+      <label class="check legal">
+        <input type="checkbox" id="legal" required />
+        I confirm I own the rights to this model or have the necessary licenses to
+        reproduce it. I assume all liability for IP infringement. This service acts
+        solely as an automated processing tool.
+      </label>
+
+      <button type="submit" id="submit">Slice</button>
+    </form>
+
+    <section id="status" class="status hidden"></section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
