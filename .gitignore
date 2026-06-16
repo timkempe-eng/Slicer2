@@ -14,6 +14,16 @@ data/
 .env
 *.local
 
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+
 # Editor / OS
 .DS_Store
 .idea/

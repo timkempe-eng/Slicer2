@@ -1,0 +1,29 @@
+#cloud-config
+# Bootstraps the Slicer2 app droplet: install Docker, fetch the repo, write the
+# runtime env (DB / Spaces / Stripe), and start the stack via docker-compose.
+package_update: true
+package_upgrade: false
+
+write_files:
+  - path: /opt/slicer2/.env
+    permissions: "0600"
+    content: |
+      DOMAIN=${domain}
+      DATABASE_URL=${database_url}
+      SPACES_REGION=${spaces_region}
+      SPACES_BUCKET=${spaces_bucket}
+      SPACES_ENDPOINT=https://${spaces_region}.digitaloceanspaces.com
+      SPACES_ACCESS_ID=${spaces_access_id}
+      SPACES_SECRET_KEY=${spaces_secret_key}
+      STRIPE_SECRET_KEY=${stripe_secret_key}
+      STRIPE_WEBHOOK_SECRET=${stripe_webhook_secret}
+
+runcmd:
+  # --- Docker engine + compose plugin ---
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable --now docker
+  # --- Fetch the application ---
+  - git clone --depth 1 --branch ${git_ref} ${git_repo} /opt/slicer2/app || (cd /opt/slicer2/app && git fetch --depth 1 origin ${git_ref} && git checkout FETCH_HEAD)
+  - cp /opt/slicer2/.env /opt/slicer2/app/deploy/.env
+  # --- Build and start ---
+  - cd /opt/slicer2/app && docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build

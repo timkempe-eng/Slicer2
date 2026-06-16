@@ -79,6 +79,21 @@ a box with OrcaSlicer/Bambu Studio installed):
 ./scripts/verify_slice.sh   # generates a cube, slices it, validates the .gcode.3mf
 ```
 
+## Hosting / deploy (DigitalOcean)
+
+Terraform under [`infra/terraform`](infra/terraform) provisions the whole stack
+— a CPU-Optimized **Droplet** (app + in-process slicer + Redis via
+docker-compose), **Managed PostgreSQL**, a **Spaces** bucket with a 1-day
+retention rule, and a cloud firewall — mirroring DO's marketplace blueprints.
+The droplet runs [`deploy/docker-compose.prod.yml`](deploy). Starter cost is
+roughly **$60/mo**. See [`infra/README.md`](infra/README.md) for sizing,
+the App-Platform alternative, and the deploy steps.
+
+```bash
+cd infra/terraform && cp terraform.tfvars.example terraform.tfvars
+terraform init && terraform plan   # review billable resources before apply
+```
+
 ## License & disclaimer
 
 Slicer2 is an independent project and is **not affiliated with or endorsed by

@@ -1,0 +1,30 @@
+# Copy to terraform.tfvars and fill in. NEVER commit the real file (gitignored).
+
+# DigitalOcean API token (https://cloud.digitalocean.com/account/api/tokens)
+do_token = "dop_v1_..."
+
+# Spaces keys (https://cloud.digitalocean.com/account/api/spaces) — needed to
+# create the bucket. Leave empty to skip Spaces for now.
+spaces_access_id  = ""
+spaces_secret_key = ""
+
+# Region that supports Droplets + Managed DB + Spaces.
+region = "nyc3"
+
+# SSH key fingerprints already uploaded to your DO account (for `ssh root@ip`).
+ssh_key_ids = []
+
+# Sizing — bump droplet_size_slug for more concurrent slices.
+droplet_size_slug = "c-2"            # 2 vCPU / 4 GB CPU-Optimized (~$42/mo)
+db_size_slug      = "db-s-1vcpu-1gb" # smallest managed Postgres (~$15/mo)
+
+# Deploy source.
+git_repo = "https://github.com/timkempe-eng/Slicer2.git"
+git_ref  = "main"
+
+# Optional: a domain you point at the droplet IP for automatic HTTPS.
+domain = ""
+
+# Phase 2 (payments) — leave empty until Stripe is wired.
+stripe_secret_key     = ""
+stripe_webhook_secret = ""
