@@ -63,6 +63,22 @@ The API boots and serves the UI without the slicer binary; actual slicing
 requires the Bambu Studio CLI on `PATH` (or run via Docker — see
 `docker-compose.yml`). See `docs/ARCHITECTURE.md` for details.
 
+### Tests
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest                 # unit + API tests (no slicer binary needed)
+pytest -m integration  # real slice; needs a slicer binary + A1 profiles
+```
+
+To prove a real end-to-end slice on a capable host (the slicer Docker image or
+a box with OrcaSlicer/Bambu Studio installed):
+
+```bash
+./scripts/verify_slice.sh   # generates a cube, slices it, validates the .gcode.3mf
+```
+
 ## License & disclaimer
 
 Slicer2 is an independent project and is **not affiliated with or endorsed by

@@ -76,24 +76,27 @@ def build_command(input_path: Path, output_path: Path, opts: SliceOptions) -> li
     ]
 
 
-_TIME_RE = re.compile(r"(?:estimated|total).*?time[^0-9]*([0-9]+)\s*h.*?([0-9]+)\s*m", re.I)
-_FILAMENT_G_RE = re.compile(r"filament[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*g", re.I)
-_FILAMENT_M_RE = re.compile(r"filament[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*m\b", re.I)
+_NUM = r"([0-9]+(?:\.[0-9]+)?)"
+_TIME_RE = re.compile(rf"(?:estimated|total).*?time[^0-9]*([0-9]+)\s*h.*?([0-9]+)\s*m", re.I)
+# Grams, optionally followed by meters on the same "filament used" line.
+_FILAMENT_RE = re.compile(rf"filament[^0-9]*{_NUM}\s*g(?:[^0-9]*{_NUM}\s*m\b)?", re.I)
 
 
 def _parse_estimates(stdout: str) -> SliceResult:
     """Best-effort parse of estimates from CLI output.
 
     The CLI's exact wording varies by version, so this is lenient and may need
-    tuning once we pin a Bambu Studio version in the Docker image.
+    tuning once we pin a Bambu Studio version in the Docker image. The estimates
+    also live in the sliced .3mf metadata, which is a more robust source to add
+    later.
     """
     result = SliceResult()
     if m := _TIME_RE.search(stdout):
         result.estimated_print_seconds = int(m.group(1)) * 3600 + int(m.group(2)) * 60
-    if m := _FILAMENT_G_RE.search(stdout):
+    if m := _FILAMENT_RE.search(stdout):
         result.filament_grams = float(m.group(1))
-    if m := _FILAMENT_M_RE.search(stdout):
-        result.filament_meters = float(m.group(1))
+        if m.group(2) is not None:
+            result.filament_meters = float(m.group(2))
     return result
 
 
