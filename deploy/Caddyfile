@@ -1,0 +1,13 @@
+# Reverse proxy for the Slicer2 app. SITE_ADDRESS is set from $DOMAIN by compose:
+#   - a hostname (e.g. slicer2.example.com) -> automatic HTTPS via Let's Encrypt
+#   - ":80" (default when no domain) -> plain HTTP on the droplet IP
+{$SITE_ADDRESS} {
+	reverse_proxy app:8000
+
+	# Allow large model uploads.
+	request_body {
+		max_size 250MB
+	}
+
+	encode zstd gzip
+}
