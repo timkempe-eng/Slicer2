@@ -51,10 +51,20 @@ async function pollJob(id) {
       setStatus(`
         <p><strong>Sliced!</strong></p>
         <p>Est. print time: ${time} &middot; Filament: ${grams}</p>
-        <p><a href="/api/jobs/${id}/download" download>⬇︎ Download .gcode.3mf</a></p>
-        <p style="color:var(--muted);font-size:.85rem">
-          Open the downloaded file in <strong>Bambu Handy</strong> to send it to your printer.
-        </p>`);
+        <p><a class="dl-btn" href="/api/jobs/${id}/download" download>⬇︎ Download .gcode.3mf</a></p>
+        <details class="howto" open>
+          <summary>How to print it (no PC)</summary>
+          <ol>
+            <li>Save the <code>.gcode.3mf</code> to a <strong>microSD card</strong>
+                (a USB-C card reader plugs into your phone).</li>
+            <li>Put the file in the card's <strong>root folder</strong>, then insert
+                the card into the A1 / A1 mini.</li>
+            <li>On the printer screen, open <strong>Print Files</strong>, pick the
+                file, and tap <strong>Start</strong>.</li>
+          </ol>
+          <p class="howto-note">Bambu Handy can't import a local file, and Bambu's
+            cloud blocks third-party print-start — so microSD is the no-PC route.</p>
+        </details>`);
       $("submit").disabled = false;
       return;
     }

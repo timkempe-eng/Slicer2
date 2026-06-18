@@ -4,50 +4,60 @@
 
 Slicer2 is an online 3D-print slicing service. Upload a model (`STL`/`STEP`/`3MF`)
 from any device — including your phone — and Slicer2 slices it **in the cloud**
-into a ready-to-print Bambu `.gcode.3mf`, then (optionally) pushes the job
-straight to your Bambu Lab printer. The goal: go from model to printing **without
-ever touching a PC**, while still monitoring the print in **Bambu Handy**.
+into a ready-to-print Bambu `.gcode.3mf`. You then print it on the A1's screen
+straight from a **microSD card** — no PC and no Bambu Studio, ever.
 
 > First target printer: **Bambu Lab A1 / A1 mini.**
 
 ## Why
 
-Bambu Handy can start *pre-sliced* models, but it can't slice an arbitrary STL,
-and slicing normally means sitting at a desktop running Bambu Studio. Slicer2
-moves the slicer to the server so the whole flow works from a browser on your
-phone.
+Slicing normally means sitting at a desktop running Bambu Studio. Slicer2 moves
+the slicer to the server, so the one thing that needed a PC now works from a
+browser on your phone. The sliced file is the deliverable.
+
+> **A note on auto-push.** We deliberately do *not* push prints to the printer
+> for you. A hosted service can't reach a printer behind your home router, and
+> Bambu's **Authorization Control System** (2025) blocks third-party tools from
+> starting cloud prints — that's reserved for Bambu's own apps. Bambu Handy also
+> can't import an arbitrary local file. So the sanctioned, reliable no-PC route
+> is **download → microSD → Print Files on the A1's screen**. A future,
+> opt-in *on-network* "local bridge" could automate delivery for users who run
+> their printer in LAN/Developer mode.
 
 ## How it works
 
 ```
-Phone / browser ──upload model──▶ FastAPI backend ──queue──▶ Slicer worker
-                                                              (Bambu Studio CLI, Docker)
-                                                                    │
-                                                            produces .gcode.3mf
-                                                                    │
-        ┌───────────────────────────────────────────────────────────┤
-        ▼                                                             ▼
-  Download .gcode.3mf                                   Push to printer (LAN or Bambu Cloud)
-  (send from Handy / SD)                                monitor the running print in Handy
+Phone / browser ──upload model──▶ FastAPI API ──RQ queue (Redis)──▶ Slicer worker
+                                       │                            (OrcaSlicer CLI, Docker)
+                                  Postgres (jobs)                          │
+                                  Spaces (files)  ◀──── .gcode.3mf ────────┘
+                                       │
+                                       ▼
+                            Download .gcode.3mf  ─▶  microSD  ─▶  Print Files on the A1 screen
 ```
 
-The two hard parts and how Slicer2 solves them:
+The hard part and how Slicer2 solves it:
 
 | Problem | Solution | Status |
 |---|---|---|
-| Slice without a PC | Headless **Bambu Studio CLI** in Docker | Implemented (needs the CLI binary in the image) |
-| Deliver to printer without a PC | **FTPS upload + MQTT start** over LAN or Bambu Cloud | LAN scaffolded; Cloud scaffolded, needs live test |
+| Slice without a PC | Headless **OrcaSlicer CLI** in Docker (RQ worker) | Implemented (needs the binary + baked A1 profiles in the image) |
+| Durable, multi-request jobs | **Postgres** + **Redis/RQ** queue + **Spaces** object storage | Implemented |
+| Deliver to printer without a PC | **microSD → Print Files** on the A1's screen | Works today (manual, fully sanctioned) |
+| Automated delivery | On-network **local bridge** (LAN/Developer mode) | Deferred — cloud auto-push is blocked by Bambu's ACS |
 
 ## Project status
 
 Early scaffold. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased plan and
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design.
 
-- ✅ FastAPI backend, job model, mobile web UI
-- ✅ Slicer abstraction that shells out to the Bambu Studio CLI
-- ⚠️ A1 slicing **profiles** must be supplied (see `backend/profiles/README.md`)
-- ⚠️ Printer delivery (LAN/Cloud) is wired against the community-documented
-  protocol but **not yet verified against real hardware**
+- ✅ FastAPI backend, mobile web UI, durable jobs (Postgres) + RQ worker (Redis)
+      + object storage (Spaces), with sqlite/local-disk fallbacks for dev
+- ✅ Slicer abstraction that shells out to the OrcaSlicer CLI
+- ⚠️ A1 slicing **profiles** are baked into the worker image at build time from
+      OrcaSlicer's bundled presets — verify a real slice on a build host
+      (`scripts/verify_slice.sh`); see `backend/profiles/README.md`
+- ⛔ Automated printer delivery is **out of scope** (blocked by Bambu's ACS and
+      home-NAT); the no-PC path is **download → microSD → Print Files**
 
 ## Quick start (local)
 

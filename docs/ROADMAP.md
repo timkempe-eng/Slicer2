@@ -1,47 +1,53 @@
 # Slicer2 — Roadmap
 
 Target hardware for v1: **Bambu Lab A1 / A1 mini**.
-End goal: upload from a phone → slice in the cloud → push to the printer via
-**Bambu Cloud**, monitored in Bambu Handy, with no PC involved.
+End goal: upload from a phone → slice in the cloud → get a ready-to-print
+`.gcode.3mf`, all with **no PC and no Bambu Studio**.
 
-> **Committed delivery model:** direct **Bambu Cloud push** (Phase 2) — the
-> "no PC, works anywhere, monitor in Handy" path. Download stays available as a
-> fallback. (Decision supersedes the PRD's download-only delivery.)
+> **Committed delivery model (revised June 2026):** **slice + download**, then
+> print from a **microSD card** via *Print Files* on the A1's screen.
+>
+> The earlier "Bambu Cloud push, monitor in Handy" plan is **not viable** for a
+> hosted service:
+> - Bambu's **Authorization Control System** (Jan 2025) makes cloud
+>   print-initiation exclusive to Bambu's own apps — third parties get
+>   monitoring only.
+> - **Bambu Handy can't import a local `.gcode.3mf`** (only MakerWorld / cloud
+>   library files).
+> - A cloud server **can't reach a home printer behind NAT** over LAN.
+>
+> Automated delivery is therefore deferred to an opt-in **on-network local
+> bridge** (a small agent / Tailscale to a printer in LAN/Developer mode) — the
+> only sanctioned way to automate phone→home-printer.
 
-## Phase 0 — Slice in the cloud  ✅ scaffolded
+## MVP — Slice in the cloud, print via microSD  ✅
 - [x] FastAPI backend + mobile web UI
 - [x] Upload endpoint (STL / 3MF / STEP / OBJ)
-- [x] Job model + background slicing task
-- [x] Bambu Studio CLI wrapper
-- [x] Download the resulting `.gcode.3mf`
-- [x] Test harness: unit + API tests, generated cube, skip-marked real-slice
+- [x] OrcaSlicer CLI wrapper + A1 profiles baked into the worker image
+- [x] Durable jobs (Postgres) + RQ worker (Redis) + object storage (Spaces),
+      with sqlite/local-disk fallbacks for dev/test
+- [x] Download the resulting `.gcode.3mf`; UI explains the microSD print flow
+- [x] Test harness: unit + API + job-persistence tests, skip-marked real-slice
       integration test (`pytest`), and `scripts/verify_slice.sh`
-- [ ] **Supply real A1 profiles** (`backend/profiles/a1/`) and verify a slice
-      (run `scripts/verify_slice.sh` on a host with OrcaSlicer/Bambu Studio)
-- [ ] Parse + show estimated print time and filament usage (best-effort parser
-      in place; prefer reading estimates from the .3mf metadata)
-- [ ] Build + run the slicer Docker image (verify the AppImage asset URL)
+- [ ] **Verify a real slice on a build host** (`scripts/verify_slice.sh`) and
+      pin the OrcaSlicer release + asset URL in `docker/slicer.Dockerfile`
+- [ ] Tune the estimate parser against the pinned OrcaSlicer stdout (prefer
+      reading estimates from the `.gcode.3mf` metadata later)
 
-## Phase 1 — LAN push (your own bench testing)
-- [ ] FTPS upload to the printer (port 990, user `bblp`, access code)
-- [ ] MQTT `start_print` to `device/<serial>/request` (port 8883, TLS)
-- [ ] Live status (progress %, stage, errors) over MQTT
-- [ ] "Print now" button in the UI
+## Next — Automated on-network delivery (opt-in "local bridge")
+The only sanctioned way to automate phone→home-printer. Requires software on the
+user's network and the printer in LAN/Developer mode (which disables ACS).
+- [ ] On-network agent (or Tailscale) so the service can reach the printer
+- [ ] FTPS upload (port 990) + MQTT `start_print` (port 8883) — `printer/lan.py`
+      is already written; validate against real A1 hardware
+- [ ] Live status (progress %, stage, errors) over MQTT in our own UI
 
-## Phase 2 — Bambu Cloud push (the no-PC goal)
-- [ ] Bambu Cloud login (account link + token storage)
-- [ ] Cloud file upload + cloud MQTT `start_print`
-- [ ] Verify the job appears / is controllable in Bambu Handy
-- [ ] Decide whether to wrap a maintained lib (pybambu / bambulabs_api)
-
-## Phase 3 — Product
-- [ ] User accounts + multiple saved printers
-- [ ] Persistent jobs (DB) + real queue + object storage
-- [ ] Print history, re-slice, profile presets per material
-- [ ] AMS / multi-color support
+## Later — Product
+- [ ] User accounts + multiple saved printers + print history / re-slice
+- [ ] Profile presets per material; AMS / multi-color support
 - [ ] Additional printer models (P1, X1, H2D)
 
 ## Open questions / risks
-- Bambu Cloud API is unofficial and may change or violate ToS.
 - Profile management (per nozzle / material) is the main quality lever.
-- Hosting the slicer is CPU/RAM heavy — needs a worker pool + limits.
+- Hosting the slicer is CPU/RAM heavy — the RQ worker needs a pool + limits.
+- Bambu's ACS may tighten further; keep delivery paths sanctioned.
