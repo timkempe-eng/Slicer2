@@ -18,8 +18,10 @@ OUTPUT_DIR = DATA_DIR / "outputs"
 # Bambu Studio / OrcaSlicer profile JSONs, organised per printer model.
 PROFILES_DIR = Path(os.getenv("SLICER2_PROFILES_DIR", BACKEND_DIR / "profiles"))
 
-# Path to the headless slicer binary (Bambu Studio or OrcaSlicer).
-SLICER_BIN = os.getenv("SLICER2_SLICER_BIN", "bambu-studio")
+# Path to the headless slicer binary. Slicer2 standardises on OrcaSlicer (a
+# Bambu Studio fork with the same CLI that bundles A1 profiles); override with
+# SLICER2_SLICER_BIN to point at Bambu Studio or an absolute path.
+SLICER_BIN = os.getenv("SLICER2_SLICER_BIN", "orca-slicer")
 
 # Per-slice wall-clock timeout, seconds.
 SLICE_TIMEOUT_SECONDS = int(os.getenv("SLICER2_SLICE_TIMEOUT", "600"))

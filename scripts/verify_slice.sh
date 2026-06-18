@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SLICER_BIN="${SLICER2_SLICER_BIN:-bambu-studio}"
+SLICER_BIN="${SLICER2_SLICER_BIN:-orca-slicer}"
 
 if ! command -v "$SLICER_BIN" >/dev/null 2>&1; then
   echo "ERROR: slicer binary '$SLICER_BIN' not found on PATH." >&2

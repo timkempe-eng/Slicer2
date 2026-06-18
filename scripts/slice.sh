@@ -25,7 +25,7 @@ case "$PROFILE" in
 esac
 
 # Run via the slicer Docker image (built from docker/slicer.Dockerfile).
-SLICER_BIN="${SLICER2_SLICER_BIN:-bambu-studio}"
+SLICER_BIN="${SLICER2_SLICER_BIN:-orca-slicer}"
 
 exec "$SLICER_BIN" \
   --slice 1 \
