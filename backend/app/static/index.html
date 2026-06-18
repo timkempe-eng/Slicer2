@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+  <!-- Replace ca-pub-XXXXXXXXXXXXXXXX with your AdSense publisher ID -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+
   <main class="app">
     <header>
       <h1>Slicer2</h1>
@@ -64,6 +67,26 @@
     </form>
 
     <section id="status" class="status hidden"></section>
+
+    <!-- AdSense display ad — replace data-ad-client/slot with your values -->
+    <div class="ad-wrap">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+           data-ad-slot="XXXXXXXXXX"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <footer>
+      <p>Slicer2 is free to use.</p>
+      <!-- Replace href with your Stripe payment link -->
+      <a class="donate-btn" href="https://buy.stripe.com/REPLACE_ME" target="_blank" rel="noopener">
+        ☕ Buy me a coffee
+      </a>
+      <p class="footer-note">Every contribution keeps the servers running.</p>
+    </footer>
   </main>
   <script src="/app.js"></script>
 </body>
