@@ -21,6 +21,8 @@ data/
 *.tfvars
 !*.tfvars.example
 crash.log
+*.tfplan
+tf.plan
 override.tf
 override.tf.json
 
