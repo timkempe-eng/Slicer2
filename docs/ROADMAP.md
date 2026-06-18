@@ -41,6 +41,9 @@ End goal: upload from a phone → slice in the cloud → push to the printer via
 - [ ] AMS / multi-color support
 - [ ] Additional printer models (P1, X1, H2D)
 
+## Infrastructure / Hosting
+- [ ] Migrate from DigitalOcean to a cheaper provider (e.g. Hetzner) — same Docker stack, lower cost (~$12–35/mo vs ~$62/mo); swap DO Spaces for Backblaze B2 (S3-compatible, no code changes)
+
 ## Open questions / risks
 - Bambu Cloud API is unofficial and may change or violate ToS.
 - Profile management (per nozzle / material) is the main quality lever.
