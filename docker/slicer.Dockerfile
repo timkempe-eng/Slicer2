@@ -11,11 +11,13 @@
 # want a single image, the API (`uvicorn app.main:app`).
 FROM ubuntu:24.04
 
-# Pin a known-good OrcaSlicer release for reproducible slices. Override at build
-# time; verify the asset name resolves (it changes per release):
-#   docker build --build-arg ORCA_APPIMAGE_URL=https://github.com/SoftFever/OrcaSlicer/releases/download/<tag>/<asset>.AppImage ...
-ARG ORCA_TAG=V2.2.0
-ARG ORCA_APPIMAGE_URL=https://github.com/SoftFever/OrcaSlicer/releases/download/${ORCA_TAG}/OrcaSlicer_Linux_AppImage_Ubuntu2404_${ORCA_TAG}.AppImage
+# OrcaSlicer asset names drift per release, so by default we resolve the latest
+# Linux AppImage from the GitHub API at build time (the project lives at
+# OrcaSlicer/OrcaSlicer; the old SoftFever/OrcaSlicer URLs 404). For a pinned,
+# reproducible build, pass the exact URL instead:
+#   docker build --build-arg ORCA_APPIMAGE_URL=https://github.com/OrcaSlicer/OrcaSlicer/releases/download/<tag>/<asset>.AppImage ...
+ARG ORCA_REPO=OrcaSlicer/OrcaSlicer
+ARG ORCA_APPIMAGE_URL=""
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
@@ -31,10 +33,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ---- slicer ----
 WORKDIR /opt/orca
-RUN curl -fSL "${ORCA_APPIMAGE_URL}" -o orca.AppImage \
-    && chmod +x orca.AppImage \
-    && ./orca.AppImage --appimage-extract >/dev/null \
-    && rm orca.AppImage
+RUN set -eu; \
+    url="${ORCA_APPIMAGE_URL}"; \
+    if [ -z "$url" ]; then \
+      api="https://api.github.com/repos/${ORCA_REPO}/releases/latest"; \
+      assets="$(curl -fsSL "$api" | grep -oE 'https://[^\"]*\.AppImage')"; \
+      url="$(printf '%s\n' "$assets" | grep -iE 'ubuntu_?24' | head -1)"; \
+      [ -n "$url" ] || url="$(printf '%s\n' "$assets" | grep -i 'linux' | head -1)"; \
+      [ -n "$url" ] || url="$(printf '%s\n' "$assets" | head -1)"; \
+    fi; \
+    [ -n "$url" ] || { echo 'ERROR: could not resolve an OrcaSlicer AppImage URL; pass --build-arg ORCA_APPIMAGE_URL=...' >&2; exit 1; }; \
+    echo "Using OrcaSlicer AppImage: $url"; \
+    curl -fSL "$url" -o orca.AppImage; \
+    chmod +x orca.AppImage; \
+    ./orca.AppImage --appimage-extract >/dev/null; \
+    rm orca.AppImage
 # Wrapper so callers can just run `orca-slicer ...` (matches SLICER2_SLICER_BIN).
 RUN printf '#!/bin/sh\nexec xvfb-run -a /opt/orca/squashfs-root/AppRun "$@"\n' \
         > /usr/local/bin/orca-slicer \

@@ -39,8 +39,10 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
-      # DOMAIN comes from .env; default to :80 (plain HTTP) when unset.
-      SITE_ADDRESS: ${DOMAIN:-:80}
+      # Plain HTTP on the droplet IP for now (DNS for the domain isn't pointed
+      # here yet). To enable the domain + automatic HTTPS later, set this to
+      # ${DOMAIN:-:80} once slicedbambu.com's A record points at this droplet.
+      SITE_ADDRESS: ":80"
     ports:
       - "80:80"
       - "443:443"

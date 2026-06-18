@@ -34,6 +34,10 @@ ALLOWED_EXTENSIONS = {".stl", ".3mf", ".step", ".stp", ".obj"}
 # Persistent jobs. Defaults to a local sqlite file so dev/test need no Postgres;
 # production injects a managed Postgres URL via DATABASE_URL.
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'slicer2.db'}")
+# Managed Postgres URLs come as `postgresql://…`, which SQLAlchemy maps to the
+# psycopg2 dialect. We ship psycopg (v3) only, so pin the driver explicitly.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len("postgresql://"):]
 
 # Task queue. When REDIS_URL is set we enqueue slices to an RQ worker; otherwise
 # slicing runs inline in-process (fine for dev/test and a single small host).
