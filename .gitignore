@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Slicer2 runtime data
+backend/data/
+data/
+
+# Local secrets / config
+.env
+*.local
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+*.tfplan
+tf.plan
+override.tf
+override.tf.json
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

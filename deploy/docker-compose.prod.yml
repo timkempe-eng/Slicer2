@@ -1,0 +1,46 @@
+# Production stack run on the DO droplet (see infra/terraform).
+# Postgres and Spaces are external managed services, injected via deploy/.env.
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      SLICER2_DATA_DIR: /data
+    volumes:
+      - app_data:/data
+    depends_on:
+      - redis
+    expose:
+      - "8000"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      # DOMAIN comes from .env; default to :80 (plain HTTP) when unset.
+      SITE_ADDRESS: ${DOMAIN:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  app_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

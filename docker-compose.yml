@@ -1,0 +1,54 @@
+# Local dev stack (PRD §11.1): FastAPI API + Redis + PostgreSQL.
+# The CPU-heavy slicer runs as its own image (docker/slicer.Dockerfile); in
+# production it becomes a separate worker droplet pulling jobs off Redis.
+services:
+  api:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      SLICER2_DATA_DIR: /data
+      DATABASE_URL: postgresql://slicer:slicer@db:5432/slicer2
+      REDIS_URL: redis://redis:6379/0
+      # Stripe (PRD §7) — set real values via .env, never commit them.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/profiles:/app/profiles
+      - slicer_data:/data
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: slicer
+      POSTGRES_PASSWORD: slicer
+      POSTGRES_DB: slicer2
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Worker scaffold for Phase 1 (Redis/Celery queue + slicer image).
+  # Uncomment once app/worker.py and the Celery task are wired:
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/slicer.Dockerfile
+  #   command: ["celery", "-A", "app.worker", "worker", "--loglevel=info"]
+  #   environment:
+  #     REDIS_URL: redis://redis:6379/0
+  #   depends_on: [redis]
+
+volumes:
+  pg_data:
+  slicer_data:

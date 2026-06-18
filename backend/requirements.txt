@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+pydantic>=2.6
+
+# Printer delivery (used by app/printer/*). paho is for MQTT start-print.
+paho-mqtt>=2.0
+
+# Bambu Cloud integration (Phase 2). Prefer a maintained community library
+# over hand-rolling the reverse-engineered protocol. Uncomment when wiring:
+# bambulabs-api>=2.0
