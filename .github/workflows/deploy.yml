@@ -1,0 +1,32 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get droplet IP from DigitalOcean
+        id: ip
+        run: |
+          IP=$(curl -s -X GET "https://api.digitalocean.com/v2/droplets?tag_name=slicer2" \
+            -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['droplets'][0]['networks']['v4'][0]['ip_address'])")
+          echo "address=$IP" >> $GITHUB_OUTPUT
+
+      - name: Deploy to droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.ip.outputs.address }}
+          username: root
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/slicer2/app
+            git fetch --depth 1 origin main
+            git checkout FETCH_HEAD
+            docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
