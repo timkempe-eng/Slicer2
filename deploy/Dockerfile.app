@@ -6,8 +6,8 @@
 
 # ---- stage 1: extract the slicer AppImage ----
 FROM ubuntu:24.04 AS slicer
-ARG BAMBU_VERSION=v01.10.02.76
-ARG BAMBU_APPIMAGE_URL=https://github.com/bambulab/BambuStudio/releases/download/${BAMBU_VERSION}/Bambu_Studio_ubuntu-24.04_PR-7286.AppImage
+ARG BAMBU_VERSION=v02.07.01.62
+ARG BAMBU_APPIMAGE_URL=https://github.com/bambulab/BambuStudio/releases/download/${BAMBU_VERSION}/BambuStudio_ubuntu24.04-${BAMBU_VERSION}-20260616195227.AppImage
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libfuse2 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/bambu
