@@ -43,7 +43,7 @@ variable "ssh_key_ids" {
 variable "droplet_size_slug" {
   type        = string
   description = "Droplet size. c-2 (2vCPU/4GB) is a good slicing starter; bump for concurrency."
-  default     = "c-2"
+  default     = "s-2vcpu-4gb"
 }
 
 variable "droplet_image" {

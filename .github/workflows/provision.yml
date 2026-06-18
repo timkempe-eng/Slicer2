@@ -43,3 +43,5 @@ jobs:
           TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
           TF_VAR_spaces_access_id: ${{ secrets.SPACES_ACCESS_ID }}
           TF_VAR_spaces_secret_key: ${{ secrets.SPACES_SECRET_KEY }}
+          TF_VAR_ssh_key_ids: '["57206872"]'
+          TF_VAR_domain: "slicedbambu.com"
