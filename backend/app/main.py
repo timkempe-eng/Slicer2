@@ -1,15 +1,17 @@
 """Slicer2 FastAPI application: upload -> slice -> download / print."""
 from __future__ import annotations
 
+import tempfile
+import uuid
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import config, jobs
+from . import config, jobs, storage
 from .models import JobView, PrinterModel, PrintRequest, SliceOptions
-from .printer import CloudPrinterClient, LanPrinterClient, PrinterError
+from .printer import LanPrinterClient, PrinterError
 
 app = FastAPI(title="Slicer2", version="0.1.0", description="Better slicing as a service.")
 
@@ -23,7 +25,6 @@ def health() -> dict:
 
 @app.post("/api/slice", response_model=JobView)
 async def create_slice(
-    background: BackgroundTasks,
     file: UploadFile = File(...),
     printer: PrinterModel = Form(PrinterModel.A1),
     layer_height_mm: float = Form(0.20),
@@ -47,29 +48,23 @@ async def create_slice(
         supports=supports,
     )
 
-    # Stream the upload to disk, enforcing the size cap as we go.
-    job_dir = config.UPLOAD_DIR / "pending"
-    job_dir.mkdir(parents=True, exist_ok=True)
+    # Stream the upload to a temp file, enforcing the size cap, then hand it to
+    # object storage (Spaces in prod, local disk in dev). The object key is
+    # independent of the job id, so concurrent uploads never collide.
     safe_name = Path(file.filename or "model").name
-    dest = job_dir / safe_name
+    input_key = f"uploads/{uuid.uuid4().hex}/{safe_name}"
     size = 0
-    with open(dest, "wb") as out:
+    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
         while chunk := await file.read(1024 * 1024):
             size += len(chunk)
             if size > config.MAX_UPLOAD_BYTES:
-                out.close()
-                dest.unlink(missing_ok=True)
                 raise HTTPException(status_code=413, detail="File too large.")
-            out.write(chunk)
+            tmp.write(chunk)
+        tmp.flush()
+        storage.upload_file(input_key, Path(tmp.name))
 
-    job = jobs.create_job(filename=safe_name, input_path=dest, options=options)
-    # Move the upload under the job id so concurrent uploads don't collide.
-    final = config.UPLOAD_DIR / job.id / safe_name
-    final.parent.mkdir(parents=True, exist_ok=True)
-    dest.replace(final)
-    job.input_path = str(final)
-
-    background.add_task(jobs.run_slice, job.id)
+    job = jobs.create_job(filename=safe_name, input_key=input_key, options=options)
+    jobs.enqueue_slice(job.id)
     return job.to_view()
 
 
@@ -87,16 +82,30 @@ def get_one_job(job_id: str) -> JobView:
 
 
 @app.get("/api/jobs/{job_id}/download")
-def download_output(job_id: str) -> FileResponse:
+def download_output(job_id: str):
     job = jobs.get_job(job_id)
     if job is None or not job.output_path:
         raise HTTPException(status_code=404, detail="No sliced output for this job.")
     name = f"{Path(job.filename).stem}.gcode.3mf"
-    return FileResponse(job.output_path, filename=name, media_type="application/octet-stream")
+    # Remote storage: redirect to a short-lived presigned URL (bytes never touch
+    # the app). Local storage: stream the file directly.
+    url = storage.presigned_get_url(job.output_path, filename=name)
+    if url:
+        return RedirectResponse(url)
+    return FileResponse(
+        storage.local_path(job.output_path), filename=name, media_type="application/octet-stream"
+    )
 
 
 @app.post("/api/jobs/{job_id}/print", response_model=JobView)
 def print_job(job_id: str, req: PrintRequest) -> JobView:
+    """Push a finished job to a printer over the local network.
+
+    Auto-push is outside the MVP (a hosted service can't reach a printer behind
+    a home NAT, and Bambu's cloud blocks third-party print-start). This LAN path
+    works only when Slicer2 runs on the same network as the printer — the future
+    on-network "local bridge". Cloud push is intentionally unimplemented.
+    """
     job = jobs.get_job(job_id)
     if job is None or not job.output_path:
         raise HTTPException(status_code=404, detail="No sliced output for this job.")
@@ -104,21 +113,23 @@ def print_job(job_id: str, req: PrintRequest) -> JobView:
     if req.transport == "lan":
         client = LanPrinterClient(req.host or "", req.serial or "", req.access_code or "")
     elif req.transport == "cloud":
-        # Phase 2: requires a logged-in cloud session. Surfaces a clear 501.
         raise HTTPException(
             status_code=501,
-            detail="Bambu Cloud printing is not implemented yet (Phase 2). "
-            "Use transport='lan' for now.",
+            detail="Bambu Cloud printing is not supported: Bambu's Authorization "
+            "Control System blocks third-party cloud print-start. Download the "
+            ".gcode.3mf and print it from the printer's screen via microSD.",
         )
     else:
         raise HTTPException(status_code=400, detail="transport must be 'lan' or 'cloud'.")
 
-    try:
-        client.print_file(Path(job.output_path), job_name=job.filename)
-    except PrinterError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    finally:
-        client.close()
+    with tempfile.TemporaryDirectory() as tmp:
+        local_out = storage.download_to(job.output_path, Path(tmp) / "job.gcode.3mf")
+        try:
+            client.print_file(local_out, job_name=job.filename)
+        except PrinterError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        finally:
+            client.close()
 
     return job.to_view()
 

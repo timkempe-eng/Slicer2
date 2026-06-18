@@ -1,5 +1,6 @@
 # Production stack run on the DO droplet (see infra/terraform).
-# Postgres and Spaces are external managed services, injected via deploy/.env.
+# Postgres and Spaces are external managed services, injected via deploy/.env
+# (DATABASE_URL, SPACES_*). Redis runs here; the slicer runs as its own worker.
 services:
   app:
     build:
@@ -9,13 +10,24 @@ services:
     env_file: .env
     environment:
       REDIS_URL: redis://redis:6379/0
-      SLICER2_DATA_DIR: /data
-    volumes:
-      - app_data:/data
     depends_on:
       - redis
     expose:
       - "8000"
+
+  # CPU-heavy slicing runs here, off the web process, draining the Redis queue.
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/slicer.Dockerfile
+    command: ["rq", "worker", "slicing", "--url", "redis://redis:6379/0"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      SLICER2_DATA_DIR: /data
+    depends_on:
+      - redis
 
   redis:
     image: redis:7-alpine
@@ -40,7 +52,6 @@ services:
       - app
 
 volumes:
-  app_data:
   redis_data:
   caddy_data:
   caddy_config:

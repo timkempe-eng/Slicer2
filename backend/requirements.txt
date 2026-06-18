@@ -3,9 +3,16 @@ uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 pydantic>=2.6
 
-# Printer delivery (used by app/printer/*). paho is for MQTT start-print.
-paho-mqtt>=2.0
+# Durable stack: persistent jobs (Postgres), task queue (Redis/RQ), object
+# storage (Spaces/S3). The app falls back to sqlite + local disk when these are
+# unconfigured, so dev/test need no external services.
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1
+alembic>=1.13
+rq>=1.16
+redis>=5.0
+boto3>=1.34
 
-# Bambu Cloud integration (Phase 2). Prefer a maintained community library
-# over hand-rolling the reverse-engineered protocol. Uncomment when wiring:
-# bambulabs-api>=2.0
+# Printer delivery (used by app/printer/*). paho is for MQTT start-print.
+# Auto-push is out of MVP scope; kept for the future on-network "local bridge".
+paho-mqtt>=2.0

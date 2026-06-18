@@ -9,11 +9,8 @@ services:
       - "8000:8000"
     environment:
       SLICER2_DATA_DIR: /data
-      DATABASE_URL: postgresql://slicer:slicer@db:5432/slicer2
+      DATABASE_URL: postgresql+psycopg://slicer:slicer@db:5432/slicer2
       REDIS_URL: redis://redis:6379/0
-      # Stripe (PRD §7) — set real values via .env, never commit them.
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     volumes:
       - ./backend/app:/app/app
       - ./backend/profiles:/app/profiles
@@ -38,16 +35,20 @@ services:
     ports:
       - "6379:6379"
 
-  # Worker scaffold for Phase 1 (Redis/Celery queue + slicer image).
-  # Uncomment once app/worker.py and the Celery task are wired:
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/slicer.Dockerfile
-  #   command: ["celery", "-A", "app.worker", "worker", "--loglevel=info"]
-  #   environment:
-  #     REDIS_URL: redis://redis:6379/0
-  #   depends_on: [redis]
+  # CPU-heavy slicing runs here, draining the Redis "slicing" queue. Built from
+  # the OrcaSlicer image so it carries the binary + baked A1 profiles.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/slicer.Dockerfile
+    command: ["rq", "worker", "slicing", "--url", "redis://redis:6379/0"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://slicer:slicer@db:5432/slicer2
+      REDIS_URL: redis://redis:6379/0
+      SLICER2_DATA_DIR: /data
+    depends_on:
+      - db
+      - redis
 
 volumes:
   pg_data:
