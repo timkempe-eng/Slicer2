@@ -28,9 +28,8 @@ esac
 SLICER_BIN="${SLICER2_SLICER_BIN:-orca-slicer}"
 
 exec "$SLICER_BIN" \
-  --slice 1 \
   --load-settings "$MACHINE;$PROCESS" \
   --load-filaments "$FILAMENT" \
-  --curr-bedtype "Textured PEI Plate" \
+  --slice 0 \
   --export-3mf "$OUTPUT" \
   "$INPUT"

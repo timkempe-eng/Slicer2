@@ -65,12 +65,14 @@ def build_command(input_path: Path, output_path: Path, opts: SliceOptions) -> li
     """
     profiles = _resolve_profiles(opts)
     settings = f"{profiles.machine};{profiles.process}"
+    # OrcaSlicer CLI: load the presets, then run the slice and export actions in
+    # order. Bed type comes from the machine preset (no --curr-bedtype flag like
+    # Bambu Studio). --slice 0 slices all plates (the single imported model).
     return [
         config.SLICER_BIN,
-        "--slice", "1",
         "--load-settings", settings,
         "--load-filaments", str(profiles.filament),
-        "--curr-bedtype", "Textured PEI Plate",
+        "--slice", "0",
         "--export-3mf", str(output_path),
         str(input_path),
     ]
