@@ -26,8 +26,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl xvfb \
         python3 python3-pip python3-venv \
-        libgl1 libgtk-3-0 libwebkit2gtk-4.1-0 libgstreamer1.0-0 \
-        libgstreamer-plugins-base1.0-0 libsoup-3.0-0 libosmesa6 \
+        libgl1 libopengl0 libegl1 libgles2 libglx0 libglu1-mesa libosmesa6 \
+        libgtk-3-0 libwebkit2gtk-4.1-0 libgstreamer1.0-0 \
+        libgstreamer-plugins-base1.0-0 libsoup-3.0-0 \
+        libgbm1 libxkbcommon0 libnss3 \
         fonts-dejavu-core libfuse2 \
     && rm -rf /var/lib/apt/lists/*
 
