@@ -27,14 +27,20 @@ PRINTER_PATTERNS = {
     "a1_mini": ["Bambu Lab A1 mini 0.4 nozzle", "*A1 mini*0.4*nozzle*", "*A1 mini*"],
     "a1": ["Bambu Lab A1 0.4 nozzle", "*A1 0.4*nozzle*", "*Lab A1*0.4*"],
 }
-PROCESS_PATTERNS = {
-    "0.12mm": ["*0.12mm*A1*", "*0.12mm Fine*", "*0.12mm*"],
-    "0.20mm": ["*0.20mm Standard*A1*", "*0.20mm Standard*", "*0.20mm*"],
-    "0.28mm": ["*0.28mm*A1*", "*0.28mm Extra Draft*", "*0.28mm*"],
+# Process/filament are matched by quality/material here; the correct *printer
+# variant* (A1 vs A1 mini — '@BBL A1' vs '@BBL A1M') is then chosen by
+# compatible_printers + the name suffix, since OrcaSlicer rejects a process
+# whose compatible_printers doesn't include the machine.
+PRINTER_SUFFIX = {"a1_mini": "A1M", "a1": "A1"}
+PROCESS_BASE = {
+    "0.12mm": ["*0.12mm Fine*", "*0.12mm*"],
+    "0.20mm": ["*0.20mm Standard*", "*0.20mm*"],
+    "0.28mm": ["*0.28mm Extra Draft*", "*0.28mm Draft*", "*0.28mm*"],
 }
-FILAMENT_PATTERNS = {
-    "pla": ["*PLA Basic @BBL A1*", "*Bambu PLA Basic*", "*Generic PLA*", "*PLA*"],
-    "petg": ["*PETG @BBL A1*", "*Bambu PETG*", "*Generic PETG*", "*PETG*"],
+# Lead with the real material presets so we never grab e.g. a support filament.
+FILAMENT_BASE = {
+    "pla": ["*Bambu PLA Basic*", "*PLA Basic*", "*Generic PLA*"],
+    "petg": ["*Bambu PETG Basic*", "*PETG Basic*", "*PETG HF*", "*Generic PETG*"],
 }
 
 
@@ -96,6 +102,54 @@ def _emit(index, patterns, out: Path, label: str) -> bool:
     return True
 
 
+def _suffix_ok(name: str, suffix: str) -> bool:
+    """True if the preset name targets this printer variant (e.g. '@BBL A1M').
+
+    The plain 'A1' suffix must not match the 'A1M' variant (substring clash).
+    """
+    if f"@BBL {suffix}" not in name:
+        return False
+    return not (suffix == "A1" and "@BBL A1M" in name)
+
+
+def pick_for_printer(index, base_patterns, machine_name: str, suffix: str) -> str | None:
+    """Choose the preset for THIS printer among material/quality candidates.
+
+    Rank by: compatible_printers contains the machine (authoritative), then the
+    name suffix. Returns None if no candidate can be tied to the printer, so we
+    never bake an incompatible preset (which OrcaSlicer would reject anyway).
+    """
+    cands: list[str] = []
+    for pat in base_patterns:
+        for name in index:
+            if fnmatch.fnmatch(name, pat) and name not in cands:
+                cands.append(name)
+    if not cands:
+        return None
+
+    def score(name: str) -> tuple[int, int]:
+        compat = 0
+        try:
+            if machine_name in (resolve(name, index).get("compatible_printers") or []):
+                compat = 1
+        except Exception:
+            pass
+        return (compat, 1 if _suffix_ok(name, suffix) else 0)
+
+    cands.sort(key=score, reverse=True)
+    best = cands[0]
+    return best if score(best) != (0, 0) else None
+
+
+def _emit_name(index, name: str | None, out: Path, label: str, patterns) -> bool:
+    if name is None:
+        print(f"  ✗ {label}: no printer-compatible preset among {patterns}", file=sys.stderr)
+        return False
+    out.write_text(json.dumps(resolve(name, index), indent=2))
+    print(f"  ✓ {label}: '{name}' -> {out.name}")
+    return True
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--resources", required=True, type=Path,
@@ -114,12 +168,20 @@ def main() -> int:
     print(f"Found {len(index)} named presets.")
 
     args.out.mkdir(parents=True, exist_ok=True)
-    ok = True
-    ok &= _emit(index, PRINTER_PATTERNS[args.printer], args.out / "machine.json", "machine")
-    for layer, pats in PROCESS_PATTERNS.items():
-        ok &= _emit(index, pats, args.out / f"process_{layer}.json", f"process {layer}")
-    for mat, pats in FILAMENT_PATTERNS.items():
-        ok &= _emit(index, pats, args.out / f"filament_{mat}.json", f"filament {mat}")
+    suffix = PRINTER_SUFFIX[args.printer]
+    machine_name = find_name(index, PRINTER_PATTERNS[args.printer])
+
+    ok = _emit_name(index, machine_name, args.out / "machine.json", "machine",
+                    PRINTER_PATTERNS[args.printer])
+    if machine_name is not None:
+        for layer, pats in PROCESS_BASE.items():
+            name = pick_for_printer(index, pats, machine_name, suffix)
+            ok &= _emit_name(index, name, args.out / f"process_{layer}.json",
+                             f"process {layer}", pats)
+        for mat, pats in FILAMENT_BASE.items():
+            name = pick_for_printer(index, pats, machine_name, suffix)
+            ok &= _emit_name(index, name, args.out / f"filament_{mat}.json",
+                             f"filament {mat}", pats)
 
     if not ok:
         print("\nSome profiles were not found — adjust patterns in this script "
