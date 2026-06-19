@@ -32,6 +32,11 @@ PRINTER_PATTERNS = {
 # compatible_printers + the name suffix, since OrcaSlicer rejects a process
 # whose compatible_printers doesn't include the machine.
 PRINTER_SUFFIX = {"a1_mini": "A1M", "a1": "A1"}
+# Force the versatile textured PEI plate (the A1's shipped plate). The machine
+# default ("Cool Plate") rejects PETG and other non-PLA filaments at slice time;
+# Textured PEI supports PLA and PETG. Applied via --load-settings, which merges
+# config keys regardless of preset group.
+DEFAULT_BED_TYPE = "Textured PEI Plate"
 PROCESS_BASE = {
     "0.12mm": ["*0.12mm Fine*", "*0.12mm*"],
     "0.20mm": ["*0.20mm Standard*", "*0.20mm*"],
@@ -154,11 +159,14 @@ def pick_for_printer(index, base_patterns, machine_name: str, suffix: str) -> st
     return best if score(best) != (0, 0) else None
 
 
-def _emit_name(index, name: str | None, out: Path, label: str, patterns) -> bool:
+def _emit_name(index, name: str | None, out: Path, label: str, patterns, extra: dict | None = None) -> bool:
     if name is None:
         print(f"  ✗ {label}: no printer-compatible preset among {patterns}", file=sys.stderr)
         return False
-    out.write_text(json.dumps(resolve(name, index), indent=2))
+    flat = resolve(name, index)
+    if extra:
+        flat.update(extra)
+    out.write_text(json.dumps(flat, indent=2))
     print(f"  ✓ {label}: '{name}' -> {out.name}")
     return True
 
@@ -188,7 +196,8 @@ def main() -> int:
     machine_name = find_name(index, PRINTER_PATTERNS[args.printer])
 
     ok = _emit_name(index, machine_name, args.out / "machine.json", "machine",
-                    PRINTER_PATTERNS[args.printer])
+                    PRINTER_PATTERNS[args.printer],
+                    extra={"curr_bed_type": DEFAULT_BED_TYPE})
     if machine_name is not None:
         for layer, pats in PROCESS_BASE.items():
             name = pick_for_printer(index, pats, machine_name, suffix)
