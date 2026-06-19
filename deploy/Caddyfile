@@ -1,10 +1,23 @@
-# Reverse proxy for the Slicer2 app. SITE_ADDRESS is set from $DOMAIN by compose:
-#   - a hostname (e.g. slicer2.example.com) -> automatic HTTPS via Let's Encrypt
-#   - ":80" (default when no domain) -> plain HTTP on the droplet IP
-{$SITE_ADDRESS} {
+# Reverse proxy for SlicedBambu.
+#
+# The named site gets an automatic Let's Encrypt certificate and serves HTTPS as
+# soon as slicedbambu.com's DNS A record points at this droplet. The :80 catch-all
+# keeps plain-HTTP access working in the meantime (e.g. the droplet IP, and the
+# domain before its cert is issued), so there's no downtime during the DNS cutover.
+slicedbambu.com, www.slicedbambu.com {
 	reverse_proxy app:8000
 
 	# Allow large model uploads.
+	request_body {
+		max_size 250MB
+	}
+
+	encode zstd gzip
+}
+
+:80 {
+	reverse_proxy app:8000
+
 	request_body {
 		max_size 250MB
 	}
