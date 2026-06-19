@@ -23,14 +23,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     SLICER2_SLICER_BIN=orca-slicer SLICER2_DATA_DIR=/data
 
+# OrcaSlicer is a single GUI binary that links the whole GTK/WebKit/GL stack
+# even for `--slice`, so all of these must be present for it to start under xvfb.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl xvfb \
+        ca-certificates curl xvfb fonts-dejavu-core libfuse2 \
         python3 python3-pip python3-venv \
-        libgl1 libopengl0 libegl1 libgles2 libglx0 libglu1-mesa libosmesa6 \
-        libgtk-3-0 libwebkit2gtk-4.1-0 libgstreamer1.0-0 \
-        libgstreamer-plugins-base1.0-0 libsoup-3.0-0 \
-        libgbm1 libxkbcommon0 libnss3 \
-        fonts-dejavu-core libfuse2 \
+        # GL / software rendering
+        libgl1 libglx0 libglx-mesa0 libgl1-mesa-dri libopengl0 libegl1 \
+        libegl-mesa0 libgles2 libglu1-mesa libosmesa6 libgbm1 \
+        # GTK / WebKit / desktop
+        libgtk-3-0 libgdk-pixbuf-2.0-0 libwebkit2gtk-4.1-0 libsoup-3.0-0 \
+        libsecret-1-0 libnss3 libxkbcommon0 libdbus-1-3 \
+        # GStreamer + misc runtime libs OrcaSlicer links directly
+        libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
+        libmspack0 libcurl4t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- slicer ----
@@ -54,6 +60,14 @@ RUN set -eu; \
 RUN printf '#!/bin/sh\nexec xvfb-run -a /opt/orca/squashfs-root/AppRun "$@"\n' \
         > /usr/local/bin/orca-slicer \
     && chmod +x /usr/local/bin/orca-slicer
+
+# Diagnostic: surface any system libs the binary still can't resolve (searching
+# the AppImage's own bundled lib dirs too). Non-fatal — just logged at build.
+RUN bin="$(find /opt/orca/squashfs-root -name 'orca-slicer' -type f | head -1)"; \
+    libs="$(find /opt/orca/squashfs-root -name 'lib' -type d | tr '\n' ':')"; \
+    echo "=== ldd missing-lib check for $bin ==="; \
+    LD_LIBRARY_PATH="$libs" ldd "$bin" 2>/dev/null | grep 'not found' \
+      || echo "(ldd reports no missing libraries)"
 
 # ---- python deps ----
 WORKDIR /app
