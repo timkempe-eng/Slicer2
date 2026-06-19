@@ -18,7 +18,9 @@
 
     <form id="slice-form">
       <label class="file-drop">
-        <input type="file" id="file" accept=".stl,.3mf,.step,.stp,.obj" required />
+        <!-- No `accept` filter: iOS/Android Files greys out .stl/.step (unknown
+             MIME) when one is set. The backend validates the extension instead. -->
+        <input type="file" id="file" required />
         <span id="file-label">Tap to choose a model (STL / 3MF / STEP / OBJ)</span>
       </label>
 
