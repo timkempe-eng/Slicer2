@@ -33,6 +33,10 @@ jobs:
             # Bring the website up first so it's live regardless of the slicer
             # image build (which pulls a large OrcaSlicer AppImage).
             docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build app redis caddy
+            # The Caddyfile is bind-mounted, so config-only changes don't recreate
+            # the container — reload it explicitly (fall back to a recreate).
+            docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile \
+              || docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --force-recreate caddy
             # Slicer worker: best-effort so a build failure doesn't take the site
             # down. Slicing comes online once this succeeds.
             docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build worker || echo "WARN: worker build/start failed; site is up, slicing deferred"

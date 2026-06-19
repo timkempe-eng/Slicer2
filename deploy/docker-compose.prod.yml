@@ -50,10 +50,10 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    # NOTE: no `cap_drop: ALL` here — the redis entrypoint drops root->redis via
+    # su-exec, which needs CAP_SETUID/SETGID. no-new-privileges still applies.
     security_opt:
       - no-new-privileges:true
-    cap_drop:
-      - ALL
 
   caddy:
     image: caddy:2-alpine
