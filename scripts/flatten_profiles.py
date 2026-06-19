@@ -44,10 +44,23 @@ FILAMENT_BASE = {
 }
 
 
-def build_index(root: Path) -> dict[str, Path]:
-    """Map every preset's ``name`` -> file path under the resources tree."""
+def build_index(root: Path, vendor: str | None = None) -> dict[str, Path]:
+    """Map every preset's ``name`` -> file path under the resources tree.
+
+    OrcaSlicer ships ~120 vendors that reuse the *same* base preset names (e.g.
+    ``fdm_process_common``), many with incompatible values (percentage line
+    widths). Resolving a Bambu preset against another vendor's base produces a
+    broken config. When ``vendor`` is given and a ``<vendor>/`` directory exists
+    in the tree, index only presets under it so inheritance stays self-consistent
+    (fall back to the whole tree if that vendor isn't present).
+    """
+    paths = sorted(root.rglob("*.json"))
+    if vendor:
+        scoped = [p for p in paths if vendor in p.parts]
+        if scoped:
+            paths = scoped
     index: dict[str, Path] = {}
-    for path in root.rglob("*.json"):
+    for path in paths:
         try:
             data = json.loads(path.read_text())
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
@@ -155,6 +168,9 @@ def main() -> int:
     ap.add_argument("--resources", required=True, type=Path,
                     help="OrcaSlicer/Bambu Studio resources dir (contains profiles/).")
     ap.add_argument("--printer", choices=list(PRINTER_PATTERNS), default="a1_mini")
+    ap.add_argument("--vendor", default="BBL",
+                    help="Resolve inheritance within this vendor subtree only "
+                         "(default BBL — Bambu). Avoids cross-vendor name clashes.")
     ap.add_argument("--out", type=Path, required=True,
                     help="Output profile dir, e.g. backend/profiles/a1")
     args = ap.parse_args()
@@ -163,8 +179,8 @@ def main() -> int:
         print(f"resources dir not found: {args.resources}", file=sys.stderr)
         return 2
 
-    print(f"Indexing presets under {args.resources} …")
-    index = build_index(args.resources)
+    print(f"Indexing presets under {args.resources} (vendor={args.vendor}) …")
+    index = build_index(args.resources, vendor=args.vendor)
     print(f"Found {len(index)} named presets.")
 
     args.out.mkdir(parents=True, exist_ok=True)
