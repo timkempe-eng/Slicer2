@@ -52,5 +52,19 @@ SPACES_REGION = os.getenv("SPACES_REGION", "nyc3")
 SPACES_ACCESS_ID = os.getenv("SPACES_ACCESS_ID")
 SPACES_SECRET_KEY = os.getenv("SPACES_SECRET_KEY")
 
+# --- Security / abuse controls --------------------------------------------
+# The LAN print endpoint opens outbound connections to a user-supplied host
+# (an SSRF surface) and only works on the printer's own network, so it's OFF on
+# the hosted service. Enable only for an on-network/self-host deploy.
+ENABLE_PRINT = os.getenv("SLICER2_ENABLE_PRINT", "false").lower() in ("1", "true", "yes")
+
+# Interactive API docs / OpenAPI schema — off in prod to shrink the surface.
+ENABLE_DOCS = os.getenv("SLICER2_ENABLE_DOCS", "false").lower() in ("1", "true", "yes")
+
+# Per-IP rate limits for the (CPU/Spaces-expensive) slice endpoint. Enforced
+# only when REDIS_URL is set; 0 disables a given window.
+SLICE_RATE_PER_MIN = int(os.getenv("SLICER2_SLICE_RATE_PER_MIN", "6"))
+SLICE_RATE_PER_DAY = int(os.getenv("SLICER2_SLICE_RATE_PER_DAY", "80"))
+
 for _d in (UPLOAD_DIR, OUTPUT_DIR):
     _d.mkdir(parents=True, exist_ok=True)

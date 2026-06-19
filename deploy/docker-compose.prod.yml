@@ -14,8 +14,18 @@ services:
       - redis
     expose:
       - "8000"
+    # Hardening: no privilege escalation, drop all Linux capabilities, cap
+    # processes/memory so a bug or abusive request can't take over the host.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 768m
 
   # CPU-heavy slicing runs here, off the web process, draining the Redis queue.
+  # This is the highest-risk surface (it runs OrcaSlicer on untrusted uploads),
+  # so the same hardening applies, with more room for the slicer's processes.
   worker:
     build:
       context: ..
@@ -28,12 +38,22 @@ services:
       SLICER2_DATA_DIR: /data
     depends_on:
       - redis
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 1024
+    mem_limit: 3g
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   caddy:
     image: caddy:2-alpine

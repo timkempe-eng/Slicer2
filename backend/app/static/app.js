@@ -34,7 +34,7 @@ form.addEventListener("submit", async (e) => {
     const job = await res.json();
     pollJob(job.id);
   } catch (err) {
-    setStatus(`<p class="err">Failed: ${err.message}</p>`);
+    setStatus(`<p class="err">Failed: ${esc(err.message)}</p>`);
     $("submit").disabled = false;
   }
 });
@@ -69,14 +69,14 @@ async function pollJob(id) {
       return;
     }
     if (job.status === "failed") {
-      setStatus(`<p class="err">Slicing failed:\n${job.error || "unknown error"}</p>`);
+      setStatus(`<p class="err">Slicing failed:\n${esc(job.error || "unknown error")}</p>`);
       $("submit").disabled = false;
       return;
     }
     setStatus(`<span class="spinner"></span>${job.status === "slicing" ? "Slicing…" : "Queued…"}`);
     setTimeout(() => pollJob(id), 1500);
   } catch (err) {
-    setStatus(`<p class="err">Lost connection: ${err.message}</p>`);
+    setStatus(`<p class="err">Lost connection: ${esc(err.message)}</p>`);
     $("submit").disabled = false;
   }
 }
@@ -84,6 +84,12 @@ async function pollJob(id) {
 function setStatus(html) {
   statusEl.classList.remove("hidden");
   statusEl.innerHTML = html;
+}
+// HTML-escape untrusted text (slicer errors, filenames) before it goes in innerHTML.
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
 }
 function fmtTime(s) {
   const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);

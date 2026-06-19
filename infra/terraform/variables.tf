@@ -37,6 +37,12 @@ variable "ssh_key_ids" {
   default     = []
 }
 
+variable "ssh_source_addresses" {
+  type        = list(string)
+  description = "CIDRs allowed to reach SSH (port 22). Lock this to your IP(s) — e.g. [\"203.0.113.4/32\"] — instead of the whole internet."
+  default     = ["0.0.0.0/0", "::/0"]
+}
+
 # --- Compute (app + slicer worker droplet) ----------------------------------
 # Slicing is CPU-bound; prefer CPU-Optimized (c-*) or General Purpose (g-*).
 # MVP: a single droplet runs the API + in-process slicer + Redis via compose.

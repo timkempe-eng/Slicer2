@@ -34,7 +34,7 @@ resource "digitalocean_firewall" "app" {
   inbound_rule {
     protocol         = "tcp"
     port_range       = "22"
-    source_addresses = ["0.0.0.0/0", "::/0"]
+    source_addresses = var.ssh_source_addresses
   }
   inbound_rule {
     protocol         = "tcp"
