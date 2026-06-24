@@ -6,6 +6,11 @@ resource "digitalocean_spaces_bucket" "files" {
   region = var.region
   acl    = "private"
 
+  # Files here are transient (1-day lifecycle below), so let `terraform destroy`
+  # empty and remove the bucket instead of erroring on leftover objects. This is
+  # what makes the freeze/thaw workflow (scripts/freeze.sh) tear down cleanly.
+  force_destroy = true
+
   lifecycle_rule {
     enabled = true
     expiration {

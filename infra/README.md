@@ -88,6 +88,34 @@ The droplet's cloud-init clones the repo, writes `deploy/.env`, and runs
 slicer image). SSH in with `ssh root@$(terraform output -raw app_ip)` and check
 `docker compose -f /opt/slicer2/app/deploy/docker-compose.prod.yml logs -f`.
 
+## Freeze / thaw — pause costs between work sessions
+
+This is an intermittent, single-developer project, so there's no reason to pay
+for the droplet (~$24–42/mo) and managed Postgres (~$15/mo) while nobody's
+touching it. DO can't truly "pause" these (a powered-off droplet still bills;
+managed DBs can't be paused), so the cheap path is to **destroy and recreate**:
+
+```bash
+./scripts/freeze.sh    # backs up the DB, then `terraform destroy` → ~$0/mo
+./scripts/thaw.sh      # `terraform apply` to bring it all back (~5 min)
+./scripts/thaw.sh --restore   # ...and reload the last DB backup
+```
+
+What survives a freeze: the Terraform **state bucket** (`slicer2-tfstate`),
+which isn't managed by Terraform. `freeze.sh` parks a compressed `pg_dump` there
+(under `db-backups/`) by running it *through* the droplet — the DB firewall only
+admits the droplet, so it can't be dumped directly. `thaw.sh --restore` pulls
+the newest dump back. Both scripts need the same env vars as a normal apply
+(`TF_VAR_*` + `AWS_*`) and SSH access to the droplet (`ssh_key_ids`).
+
+Notes:
+- The Spaces *files* bucket has `force_destroy = true` so teardown doesn't choke
+  on leftover objects (they're 1-day-lifecycle transient anyway).
+- `freeze.sh --no-backup` skips the dump; `--force` proceeds even if it fails;
+  `-y` skips the destroy confirmation. `thaw.sh -y` skips the apply prompt.
+- The dump is taken `--clean --if-exists`, so a restore deterministically
+  overwrites whatever schema the freshly-booted app recreated.
+
 ## Before you `apply`
 
 - This **creates real, billable resources** — review `terraform plan` first.
