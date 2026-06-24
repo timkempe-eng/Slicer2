@@ -11,7 +11,6 @@
 
 region            = "nyc3"
 droplet_size_slug = "s-2vcpu-4gb"
-db_size_slug      = "db-s-1vcpu-1gb"
 
 # Domain that points at the droplet for automatic HTTPS.
 domain = "slicedbambu.com"

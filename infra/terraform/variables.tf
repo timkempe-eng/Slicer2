@@ -27,7 +27,7 @@ variable "basename" {
 
 variable "region" {
   type        = string
-  description = "DO region. Must support Droplets, Managed DB, and Spaces (e.g. nyc3, sfo3, fra1, ams3, sgp1)."
+  description = "DO region. Must support Droplets and Spaces (e.g. nyc3, sfo3, fra1, ams3, sgp1)."
   default     = "nyc3"
 }
 
@@ -104,15 +104,4 @@ variable "retention_days" {
   default     = 1
 }
 
-# --- Managed PostgreSQL -----------------------------------------------------
-variable "db_size_slug" {
-  type        = string
-  description = "Managed Postgres node size."
-  default     = "db-s-1vcpu-1gb"
-}
-
-variable "db_node_count" {
-  type        = number
-  description = "Postgres nodes (1 = no standby; raise for HA)."
-  default     = 1
-}
+# Postgres runs as a container on the app droplet — no managed DB variables needed.

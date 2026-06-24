@@ -16,7 +16,6 @@ resource "digitalocean_project" "this" {
   environment = "Production"
   resources = [
     digitalocean_droplet.app.urn,
-    digitalocean_database_cluster.pg.urn,
     digitalocean_spaces_bucket.files.urn,
   ]
 }

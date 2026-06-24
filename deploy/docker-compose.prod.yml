@@ -1,7 +1,25 @@
 # Production stack run on the DO droplet (see infra/terraform).
-# Postgres and Spaces are external managed services, injected via deploy/.env
-# (DATABASE_URL, SPACES_*). Redis runs here; the slicer runs as its own worker.
+# Postgres and Redis run as containers here; Spaces is an external service with
+# credentials injected via deploy/.env (SPACES_*). DATABASE_URL is set directly
+# in the environment sections below (no managed DB needed).
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: slicer2
+      POSTGRES_USER: slicer2
+      POSTGRES_PASSWORD: slicer2local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slicer2"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
   app:
     build:
       context: ..
@@ -9,9 +27,13 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      DATABASE_URL: postgresql+psycopg://slicer2:slicer2local@postgres:5432/slicer2
       REDIS_URL: redis://redis:6379/0
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     expose:
       - "8000"
     # Hardening: no privilege escalation, drop all Linux capabilities, cap
@@ -34,10 +56,14 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      DATABASE_URL: postgresql+psycopg://slicer2:slicer2local@postgres:5432/slicer2
       REDIS_URL: redis://redis:6379/0
       SLICER2_DATA_DIR: /data
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -69,6 +95,7 @@ services:
       - app
 
 volumes:
+  postgres_data:
   redis_data:
   caddy_data:
   caddy_config:

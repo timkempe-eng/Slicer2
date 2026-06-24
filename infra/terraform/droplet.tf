@@ -15,7 +15,6 @@ resource "digitalocean_droplet" "app" {
     git_repo              = var.git_repo
     git_ref               = var.git_ref
     domain                = var.domain
-    database_url          = digitalocean_database_cluster.pg.private_uri
     spaces_region         = var.region
     spaces_bucket         = digitalocean_spaces_bucket.files.name
     spaces_access_id      = var.spaces_access_id
@@ -25,7 +24,7 @@ resource "digitalocean_droplet" "app" {
   })
 }
 
-# Cloud firewall: SSH + HTTP/HTTPS only.
+# Cloud firewall: SSH + HTTP/HTTPS only. Postgres is container-local; no DB port exposed.
 resource "digitalocean_firewall" "app" {
   name        = "${local.name}-fw"
   droplet_ids = [digitalocean_droplet.app.id]
