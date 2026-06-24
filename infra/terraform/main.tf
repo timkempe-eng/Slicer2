@@ -2,8 +2,7 @@ locals {
   name = var.basename
 }
 
-# A tag applied to everything so the resources group cleanly in the DO console
-# and can be referenced by the database firewall.
+# A tag applied to everything so the resources group cleanly in the DO console.
 resource "digitalocean_tag" "this" {
   name = local.name
 }
@@ -16,7 +15,6 @@ resource "digitalocean_project" "this" {
   environment = "Production"
   resources = [
     digitalocean_droplet.app.urn,
-    digitalocean_database_cluster.pg.urn,
     digitalocean_spaces_bucket.files.urn,
   ]
 }

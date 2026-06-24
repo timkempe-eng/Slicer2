@@ -1,6 +1,6 @@
 #cloud-config
 # Bootstraps the Slicer2 app droplet: install Docker, fetch the repo, write the
-# runtime env (DB / Spaces / Stripe), and start the stack via docker-compose.
+# runtime env (Spaces / Stripe), and start the stack via docker-compose.
 package_update: true
 package_upgrade: false
 
@@ -9,7 +9,6 @@ write_files:
     permissions: "0600"
     content: |
       DOMAIN=${domain}
-      DATABASE_URL=${database_url}
       SPACES_REGION=${spaces_region}
       SPACES_BUCKET=${spaces_bucket}
       SPACES_ENDPOINT=https://${spaces_region}.digitaloceanspaces.com

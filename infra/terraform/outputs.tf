@@ -8,12 +8,6 @@ output "app_url" {
   value       = var.domain != "" ? "https://${var.domain}" : "http://${digitalocean_droplet.app.ipv4_address}"
 }
 
-output "database_uri" {
-  description = "Managed Postgres connection URI (private network)."
-  value       = digitalocean_database_cluster.pg.private_uri
-  sensitive   = true
-}
-
 output "spaces_bucket" {
   description = "Spaces bucket name for uploads/outputs."
   value       = digitalocean_spaces_bucket.files.name
